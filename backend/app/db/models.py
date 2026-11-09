@@ -2,7 +2,7 @@ from sqlalchemy import DateTime, Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import UTC, datetime
 from pgvector.sqlalchemy import Vector
-from app.db.session import Base
+from db.session import Base
 
 class User(Base):
     __tablename__ = "users"

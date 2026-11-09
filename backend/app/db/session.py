@@ -1,3 +1,4 @@
+# Source of truth for DB(database connections, engine creation, and async session management)
 import os
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
