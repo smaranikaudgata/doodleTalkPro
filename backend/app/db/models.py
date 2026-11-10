@@ -1,8 +1,9 @@
-from sqlalchemy import DateTime, Column, Integer, String, ForeignKey, Text
+from sqlalchemy import DateTime, Integer, String, ForeignKey, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import UTC, datetime
 from pgvector.sqlalchemy import Vector
-from db.session import Base
+from app.db.session import Base
+from app.utils.constants import DocumentStatus, ChatRole
 
 class User(Base):
     __tablename__ = "users"
@@ -23,7 +24,8 @@ class Document(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     filename: Mapped[str] = mapped_column(String(50))
-    status: Mapped[str] = mapped_column(String(50), default="processing")
+    file_path: Mapped[str] = mapped_column(String(255), nullable=True)
+    status: Mapped[DocumentStatus] = mapped_column(default=DocumentStatus.processing)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -39,6 +41,13 @@ class DocumentChunk(Base):
     doc_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
     text_content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(768))
+    __table_args__ = (
+    Index('hnsw_index_for_embedding', 'embedding',
+          postgresql_using='hnsw',
+          postgresql_with={'m': 16, 'ef_construction': 64},
+          postgresql_ops={'embedding': 'vector_cosine_ops'},
+        ),
+    )
 
     #relationships
     document: Mapped["Document"] = relationship(back_populates="document_chunks")
@@ -61,7 +70,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id"), nullable=False)
-    role: Mapped[str] = mapped_column(String(100))
+    role: Mapped[ChatRole] = mapped_column(default=ChatRole.user)
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
