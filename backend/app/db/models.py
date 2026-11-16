@@ -22,8 +22,8 @@ class User(Base):
 class Document(Base):
     __tablename__ = "documents"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    filename: Mapped[str] = mapped_column(String(50))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(255))
     file_path: Mapped[str] = mapped_column(String(255), nullable=True)
     status: Mapped[DocumentStatus] = mapped_column(default=DocumentStatus.processing)
     created_at: Mapped[datetime] = mapped_column(
@@ -38,7 +38,7 @@ class Document(Base):
 class DocumentChunk(Base):
     __tablename__ = "document_chunks"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    doc_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    doc_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index= True)
     text_content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(768))
     __table_args__ = (
@@ -55,7 +55,7 @@ class DocumentChunk(Base):
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index= True)
     title: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -69,7 +69,7 @@ class ChatSession(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id"), nullable=False)
+    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
     role: Mapped[ChatRole] = mapped_column(default=ChatRole.user)
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(

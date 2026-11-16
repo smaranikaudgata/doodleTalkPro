@@ -8,9 +8,9 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from db.session import get_async_db
-import db.models as models
-from config import settings
+from app.db.session import get_async_db
+import app.db.models as models
+from app.config import settings
 
 password_hash = PasswordHash.recommended()
 
@@ -24,8 +24,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
 
 
+# Create a JWT access token
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Create a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
@@ -42,8 +42,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 
+# Verify a JWT access token and return the subject (user id) if valid
 def verify_access_token(token: str) -> str | None:
-    """Verify a JWT access token and return the subject (user id) if valid."""
     try:
         payload = jwt.decode(
             token,
@@ -51,7 +51,7 @@ def verify_access_token(token: str) -> str | None:
             algorithms=[settings.algorithm],
             options={"require": ["exp", "sub"]},
         )
-    except jwt.InvalidTokenError:
+    except JWTError:
         return None
     else:
         return payload.get("sub")
@@ -68,25 +68,32 @@ async def get_current_user(
     )
     
     try:
-        # 1. Decode the token using your secret key
+        # Decode the token using your secret key
         payload = jwt.decode(
             token.credentials, 
             settings.secret_key.get_secret_value(), 
-            algorithms=[settings.algorithm]
+            algorithms=[settings.algorithm],
+            options={"require": ["exp", "sub"]}
         )
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            raise credentials_exception
+
+        # Safely catch malformed IDs to prevent 500 crashes
+        try:
+            user_id = int(user_id_str)
+        except ValueError:
             raise credentials_exception
             
     except JWTError:
         raise credentials_exception
 
-    # 2. Verify the user still exists in PostgreSQL
-    result = await db.execute(select(models.User).where(models.User.id == int(user_id)))
+    # Verify the user still exists in PostgreSQL
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalar_one_or_none()
 
     if user is None:
         raise credentials_exception
 
-    # 3. Return the SQLAlchemy user model
+    # Return the SQLAlchemy user model
     return user

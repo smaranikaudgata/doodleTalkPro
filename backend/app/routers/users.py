@@ -1,26 +1,24 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.session import get_async_db
-import db.models as models
-import schemas
-import auth
+from app.db.session import get_async_db
+import app.db.models as models
+from app import schemas, auth
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
 async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_async_db)):
-    # 1. Hash the plaintext password provided by the frontend
+    # Hash the plaintext password provided by the frontend
     hashed_pw = auth.hash_password(user.password)
 
-    # 2. Explicitly map the fields to the SQLAlchemy model
-    # Do not use **user.model_dump() because Pydantic provides 'password' but SQLAlchemy expects 'hashed_password'
+    # Explicitly map the fields to the SQLAlchemy model
     new_user = models.User(
         email=user.email,
         hashed_password=hashed_pw 
     )
     
-    # 3. Async transaction sequence to save the row and fetch the auto-generated Postgres ID
+    # Async transaction sequence to save the row and fetch the auto-generated Postgres ID
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
