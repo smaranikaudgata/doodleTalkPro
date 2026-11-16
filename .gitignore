@@ -17,3 +17,6 @@ celerybeat-schedule
 # IDEs / OS
 .vscode/
 .DS_Store
+
+# Folders
+backend/uploads/*
